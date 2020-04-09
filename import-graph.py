@@ -10,6 +10,7 @@ import pickle
 from xml.etree import ElementTree
 import re
 import html
+import shutil
 
 DUMP_LANG = 'en'
 DUMP_DATE = '20200401'
@@ -41,6 +42,7 @@ def collect_data_file(ifile, size):
         print('Processing', ifile)
 
     is_text = False
+    ignore_page = False
     redirect_page = False
     title = None
     links = None
@@ -57,12 +59,14 @@ def collect_data_file(ifile, size):
             l = l.decode('utf8').strip()
 
             if l.startswith('<page'):
+                count += 1
+                ignore_page = False
                 redirect_page = False
                 title = None
                 links = set()
                 continue
 
-            if not redirect_page:
+            if not ignore_page and not redirect_page:
                 if l.startswith('<text'):
                     is_text = True
                     ignore_text = False
@@ -71,11 +75,12 @@ def collect_data_file(ifile, size):
                     is_text = False
                     continue
                 if l.startswith('<title'):
-                    title = html.unescape(l[7:-8]).lower()
+                    title = html.unescape(l[7:-8])
+                    if title not in page_ids: ignore_page = True
                     continue
                 if l.startswith('<redirect'):
                     redirect_page = True
-                    to = html.unescape(l[17:-4]).lower()
+                    to = html.unescape(l[17:-4])
                     if to in page_ids:
                         local_redirects[page_ids[title]] = page_ids[to]
                     continue
@@ -83,7 +88,7 @@ def collect_data_file(ifile, size):
                     local_graph[page_ids[title]] = list(links)
                     continue
                 if is_text:
-                    l = html.unescape(l.lower())
+                    l = html.unescape(l)
                     if not ignore_text:
                         l = re.sub(r"<ref>.*?</ref>","<<REF>>",l)
                         l = l.replace("_"," ")
@@ -98,7 +103,7 @@ def collect_data_file(ifile, size):
     with open(TEMP_DIR + ifile + '-redirects.pkl', 'wb') as f:
         pickle.dump(local_redirects, f)
 
-    print('Finished', ifile, f"({count} pages)")
+    print('Finished', ifile, f"({count} pages, {len(local_redirects)} redirects, {len(local_graph)} edge groups)")
 
 if not path.isfile(DOWNLOAD_DIR + 'dumpstatus.json'):
     with open(DOWNLOAD_DIR + 'dumpstatus.json', 'wb') as f:
@@ -137,3 +142,5 @@ for i in os.listdir(TEMP_DIR):
 with open(RESULTS_DIR + 'redirects.pkl','wb') as f:
     pickle.dump(redirects,f)
 del redirects
+
+shutil.rmtree(TEMP_DIR)

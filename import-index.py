@@ -15,18 +15,28 @@ DUMP_DATE = '20200401'
 DOWNLOAD_URL = f"https://dumps.wikimedia.org/{DUMP_LANG}wiki/{DUMP_DATE}/"
 
 start_blacklist = [
-    ':',
-    'image:',
-    'wikipedia:',
-    'wp:',
-    'file:',
-    'user:',
-    'wikt:',
-    'wikisource:',
-    'talk:',
-    'wiktionary:',
-    's:',
-    'voy:',
+    'Talk:',
+    'User:',
+    'User talk:',
+    'Wikipedia:',
+    'Wikipedia talk:',
+    'File:',
+    'File talk:',
+    'MediaWiki:',
+    'MediaWiki talk:',
+    'Template:',
+    'Template talk:',
+    'Help:',
+    'Help talk:',
+    'Category talk:',
+    'Portal:',
+    'Portal talk:',
+    'Draft:',
+    'Draft talk:',
+    'TimedText:',
+    'TimedText talk:',
+    'Module:',
+    'Module talk:',
 ]
 
 INDEX_DIR = 'downloads/'
@@ -56,7 +66,13 @@ def collect_index_file(ids, ifile, size):
     d = {}
     for r in data.strip().split('\n'):
         c = r.split(':',2)
-        d[html.unescape(c[2]).lower()] = int(c[1])
+        i = int(c[1])
+        title = html.unescape(c[2])
+        if not any(map(lambda b : title.startswith(b), start_blacklist)):
+            d[title] = i
+            if ':' in title:
+                x = title.split(':')[0]
+                if x[-1] == ' ': continue
 
     ids.update(d)
     print('Added', ifile)
