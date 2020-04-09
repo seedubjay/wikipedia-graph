@@ -10,7 +10,6 @@ import pickle
 from xml.etree import ElementTree
 import re
 import html
-from tqdm import tqdm
 
 DUMP_LANG = 'en'
 DUMP_DATE = '20200401'
