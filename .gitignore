@@ -2,3 +2,5 @@ downloads/*
 .vscode
 .DS_Store
 results/*
+temp/*
+test.py
