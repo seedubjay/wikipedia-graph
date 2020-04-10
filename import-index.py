@@ -47,7 +47,7 @@ RESULTS_DIR = 'results/'
 if not path.isdir(RESULTS_DIR): 
     os.mkdir(RESULTS_DIR)
 
-def collect_index_file(ids, ifile, size):
+def collect_index_file(ids, start_count, ifile, size):
     compressed_data = None
     if path.isfile(INDEX_DIR + ifile):
         with open(INDEX_DIR + ifile, 'rb') as f:
@@ -64,17 +64,22 @@ def collect_index_file(ids, ifile, size):
     data = bz2.decompress(compressed_data).decode('utf8')
     
     d = {}
+    local_start_count = {}
+
     for r in data.strip().split('\n'):
         c = r.split(':',2)
         i = int(c[1])
         title = html.unescape(c[2])
+        for b in start_blacklist:
+            if title.startswith(b):
+                if b not in local_start_count: local_start_count[b] = start_count[b]
+                local_start_count[b] += 1
+
         if not any(map(lambda b : title.startswith(b), start_blacklist)):
             d[title] = i
-            if ':' in title:
-                x = title.split(':')[0]
-                if x[-1] == ' ': continue
 
     ids.update(d)
+    start_count.update(local_start_count)
     print('Added', ifile)
 
 if __name__ == '__main__':
@@ -86,9 +91,17 @@ if __name__ == '__main__':
 
     manager = Manager()
     id_map = manager.dict()
+    start_count = manager.dict()
+    for b in start_blacklist: start_count[b] = 0
 
     with Pool(8) as pool:
-        pool.starmap(partial(collect_index_file,id_map),[(i,files[i]['size']) for i in index_files])
+        pool.starmap(partial(collect_index_file,id_map,start_count),[(i,files[i]['size']) for i in index_files])
+    
+    total = sum(start_count.values()) + len(id_map)
+    for b in start_blacklist:
+        if start_count[b] > 0: print(f"'{b}' - {start_count[b]} ({start_count[b]/total})")
+    print('total -', total)
+    print()
 
     with open(RESULTS_DIR + 'index.pkl', 'wb') as f:
         d = id_map.copy()

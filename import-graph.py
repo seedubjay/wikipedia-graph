@@ -96,7 +96,6 @@ def collect_data_file(ifile, size):
                         m = list(map(lambda s : s.split('|')[0].split('#')[0],m))
                         links.update(filter(lambda s : s in page_ids,m))
 
-    
     with open(TEMP_DIR + ifile + '-graph.pkl', 'wb') as f:
         pickle.dump(local_graph, f)
     
@@ -123,24 +122,46 @@ for i in data_pages:
     collect_data_file(i,files[i]['size'])
 
 # merge
+
+del page_ids
+
 graph = {}
 for i in os.listdir(TEMP_DIR):
     if i.endswith('-graph.pkl'):
-        with open(i,'rb') as f:
+        with open(TEMP_DIR + i,'rb') as f:
             d = pickle.load(f)
             graph.update(d)
-with open(RESULTS_DIR + 'raw_graph.pkl','wb') as f:
-    pickle.dump(graph,f)
-del graph
+            print('loaded', i)
 
 redirects = {}
 for i in os.listdir(TEMP_DIR):
     if i.endswith('-redirects.pkl'):
-        with open(i,'rb') as f:
+        with open(TEMP_DIR + i,'rb') as f:
             d = pickle.load(f)
             redirects.update(d)
+            print('loaded', i)
+
+k = list(redirects.keys())
+for i in k:
+    x = i
+    while x in redirects: x = redirects[x]
+    if x in graph: redirects[i] = x
+    else: del redirects[i]
+
 with open(RESULTS_DIR + 'redirects.pkl','wb') as f:
     pickle.dump(redirects,f)
-del redirects
 
-shutil.rmtree(TEMP_DIR)
+print(f"saved {len(redirects)} redirects")
+
+count = 0
+for a in graph:
+    k = list(graph[a].keys())
+    for b in k:
+        if graph[a][b] in redirects: graph[a][b] = redirects[graph[a][b]]
+        elif graph[a][b] not in graph: del graph[a][b]
+    count += len(graph[a])
+
+with open(RESULTS_DIR + 'graph.pkl','wb') as f:
+    pickle.dump(graph,f)
+
+print(f"saved {len(graph)} edges")
