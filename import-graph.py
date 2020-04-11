@@ -3,8 +3,10 @@ from tqdm import tqdm
 from os import path
 import os
 
-DUMP_LANG = 'pt'
+DUMP_LANG = 'sa'
+if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
 DUMP_DATE = '20200401'
+if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
 
 db_client = MongoClient('localhost', 27017)
 db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
@@ -76,7 +78,7 @@ with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links.csv", 'w') as f:
                 n['links'].append(l)
                 if not first_row: f.write('\n')
                 first_row = False
-                f.write(f"{i['_id']},{l}")
+                f.write(f"{i['_id']},{l},LINKS_TO")
         batch.append(n)
         if len(batch) == 100:
             graph_db.insert_many(batch)

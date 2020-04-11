@@ -11,8 +11,10 @@ import html
 
 from pymongo import MongoClient
 
-DUMP_LANG = 'pt'
+DUMP_LANG = 'sa'
+if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
 DUMP_DATE = '20200401'
+if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
 
 db_client = MongoClient('localhost', 27017)
 db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
@@ -103,16 +105,8 @@ if __name__ == '__main__':
     page_db.drop()
     page_db.create_index([('title',1)])
 
-    with Pool(8) as pool:
-        pool.starmap(collect_index_file,[(i,files[i]['size']) for i in index_files])
-    
-    # total = sum(start_count.values()) + len(id_map)
-    # for b in start_blacklist:
-    #     if start_count[b] > 0: print(f"'{b}' - {start_count[b]} ({start_count[b]/total})")
-    # print('total -', total)
-    # print()
-
-    # with open(RESULTS_DIR + 'index.pkl', 'wb') as f:
-    #     d = id_map.copy()
-    #     print('Pickling', len(d), 'items')
-    #     pickle.dump(d, f)
+    try:
+        with Pool(8) as pool:
+            pool.starmap(collect_index_file,[(i,files[i]['size']) for i in index_files])
+    finally:
+        page_db.drop()
