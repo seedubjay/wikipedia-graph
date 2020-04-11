@@ -102,7 +102,7 @@ def collect_data_file(ifile, size):
                     to = html.unescape(l[17:-4])
                     x = db.pages.find_one({'title': to}, {'_id':1})
                     if x is not None:
-                        #local_redirects[page_ids[title]] = page_ids[to]
+                        # local_redirects[page_ids[title]] = page_ids[to]
                         db.pages.update_one({'_id': page_id}, {'$set': {'redirect': x['_id']}})
                     continue
                 if l.endswith('</page>'):

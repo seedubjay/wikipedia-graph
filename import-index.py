@@ -83,7 +83,7 @@ def collect_index_file(ifile, size):
         if not any(map(lambda b : title.startswith(b), start_blacklist)):
             d.append({'title':title, '_id':i})
 
-
+    db.pages.insert_many(d)
     print('Added', ifile)
 
 if __name__ == '__main__':
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     # print('total -', total)
     # print()
 
-    with open(RESULTS_DIR + 'index.pkl', 'wb') as f:
-        d = id_map.copy()
-        print('Pickling', len(d), 'items')
-        pickle.dump(d, f)
+    # with open(RESULTS_DIR + 'index.pkl', 'wb') as f:
+    #     d = id_map.copy()
+    #     print('Pickling', len(d), 'items')
+    #     pickle.dump(d, f)
