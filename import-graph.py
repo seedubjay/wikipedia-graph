@@ -3,13 +3,13 @@ from tqdm import tqdm
 from os import path
 import os
 
-DUMP_LANG = 'de'
+DUMP_LANG = 'pt'
 DUMP_DATE = '20200401'
 
 db_client = MongoClient('localhost', 27017)
-db = db_client.wikipedia
-page_db = db[f"{DUMP_LANG}wiki-{DUMP_DATE}-pages"]
-graph_db = db[f"{DUMP_LANG}wiki-{DUMP_DATE}-graph"]
+db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
+page_db = db.pages
+graph_db = db.graph
 
 RESULTS_DIR = 'results/'
 if not path.isdir(RESULTS_DIR): 
@@ -32,6 +32,7 @@ start_blacklist = [
     'Template talk:',
     'Help:',
     'Help talk:',
+    'Category:',
     'Category talk:',
     'Portal:',
     'Portal talk:',
@@ -66,7 +67,7 @@ batch = []
 
 with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links.csv", 'w') as f:
     first_row = True
-    graph_db.delete_many({})
+    graph_db.drop()
     for i in tqdm(page_db.find({'links' : {'$exists' : 1}}, {'links':1}), total=len(pages)):
         n = {'_id': i['_id'], 'links' : []}
         for l in i['links']:

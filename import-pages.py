@@ -16,12 +16,13 @@ import time
 
 from pymongo import MongoClient
 
-DUMP_LANG = 'de'
+DUMP_LANG = 'pt'
 DUMP_DATE = '20200401'
 
 db_client = MongoClient('localhost', 27017)
-db = db_client.wikipedia
-page_db = db[f"{DUMP_LANG}wiki-{DUMP_DATE}-pages"]
+db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
+page_db = db.pages
+file_db = db.uploaded_files
 
 DOWNLOAD_URL = f"https://dumps.wikimedia.org/{DUMP_LANG}wiki/{DUMP_DATE}/"
 
@@ -33,14 +34,10 @@ RESULTS_DIR = 'results/'
 if not path.isdir(RESULTS_DIR): 
     os.mkdir(RESULTS_DIR)
 
-TEMP_DIR = 'temp/'
-if not path.isdir(TEMP_DIR): 
-    os.mkdir(TEMP_DIR)
-
-def collect_data_file(ifile, size):
+def collect_data_file(ifile):
     first_line = 0
     count = 0
-    upload_info = db.uploaded_files.find_one({'file': ifile})
+    upload_info = file_db.find_one({'file': ifile})
     if upload_info is None:
         db.uploaded_files.insert_one({'file':ifile,'line':0,'page_count':0})
     else:
@@ -50,13 +47,7 @@ def collect_data_file(ifile, size):
         first_line = upload_info['line']
         count = upload_info['page_count']
 
-    if not path.isfile(DOWNLOAD_DIR + ifile) or not path.getsize(DOWNLOAD_DIR + ifile) == size:
-        with open(DOWNLOAD_DIR + ifile, 'wb') as f:
-            r = requests.get(DOWNLOAD_URL + ifile, stream=True)
-            f.writelines(r.iter_content(1024))
-        print('Processing', ifile, '(w/ download)')
-    else:
-        print('Processing', ifile, 'from line', first_line)
+    print('Processing', ifile, 'from line', first_line)
 
     is_text = False
     ignore_page = False
@@ -74,7 +65,7 @@ def collect_data_file(ifile, size):
             l = l.decode('utf8').strip()
             if l.startswith('<page'):
                 if count % 100 == 0: 
-                    db.uploaded_files.update_one({'file': ifile},{'$set' : {'line': line_count, 'page_count': count}})
+                    file_db.update_one({'file': ifile},{'$set' : {'line': line_count, 'page_count': count}})
                 count += 1
                 
                 ignore_page = False
@@ -148,6 +139,13 @@ if __name__ == '__main__':
     # with open(RESULTS_DIR + 'index.pkl', 'rb') as f:
     #     page_ids = pickle.load(f)
 
+    for ifile in data_pages:
+        if not path.isfile(DOWNLOAD_DIR + ifile) or not path.getsize(DOWNLOAD_DIR + ifile) == files[ifile]['size']:
+            with open(DOWNLOAD_DIR + ifile, 'wb') as f:
+                print('Downloading', ifile)
+                r = requests.get(DOWNLOAD_URL + ifile, stream=True)
+                f.writelines(r.iter_content(1024))
+
     with Pool(16) as pool:
-        pool.starmap(collect_data_file,[(x,files[x]['size']) for x in data_pages])
+        pool.map(collect_data_file,data_pages)
             

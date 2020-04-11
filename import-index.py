@@ -11,38 +11,38 @@ import html
 
 from pymongo import MongoClient
 
-DUMP_LANG = 'de'
+DUMP_LANG = 'pt'
 DUMP_DATE = '20200401'
 
 db_client = MongoClient('localhost', 27017)
-db = db_client.wikipedia
-page_db = db[f"{DUMP_LANG}wiki-{DUMP_DATE}-pages"]
+db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
+page_db = db.pages
 
 DOWNLOAD_URL = f"https://dumps.wikimedia.org/{DUMP_LANG}wiki/{DUMP_DATE}/"
 
 start_blacklist = [
-    'Talk:',
-    'User:',
-    'User talk:',
-    'Wikipedia:',
-    'Wikipedia talk:',
-    'File:',
-    'File talk:',
-    'MediaWiki:',
-    'MediaWiki talk:',
-    'Template:',
-    'Template talk:',
-    'Help:',
-    'Help talk:',
-    'Category talk:',
-    'Portal:',
-    'Portal talk:',
-    'Draft:',
-    'Draft talk:',
-    'TimedText:',
-    'TimedText talk:',
-    'Module:',
-    'Module talk:',
+    # 'Talk:',
+    # 'User:',
+    # 'User talk:',
+    # 'Wikipedia:',
+    # 'Wikipedia talk:',
+    # 'File:',
+    # 'File talk:',
+    # 'MediaWiki:',
+    # 'MediaWiki talk:',
+    # 'Template:',
+    # 'Template talk:',
+    # 'Help:',
+    # 'Help talk:',
+    # 'Category talk:',
+    # 'Portal:',
+    # 'Portal talk:',
+    # 'Draft:',
+    # 'Draft talk:',
+    # 'TimedText:',
+    # 'TimedText talk:',
+    # 'Module:',
+    # 'Module talk:',
 ]
 
 DOWNLOAD_DIR = 'downloads/'
@@ -54,36 +54,22 @@ if not path.isdir(RESULTS_DIR):
     os.mkdir(RESULTS_DIR)
 
 def collect_index_file(ifile, size):
-    compressed_data = None
-    if path.isfile(DOWNLOAD_DIR + ifile):
-        with open(DOWNLOAD_DIR + ifile, 'rb') as f:
-            compressed_data = f.read()
-        if len(compressed_data) != size:
-            print('Found corrupted', ifile)
-            compressed_data = None
-
-    if compressed_data is None:
-        compressed_data = requests.get(DOWNLOAD_URL + ifile).content
-        print('Downloaded', ifile)
-        with open(DOWNLOAD_DIR + ifile, 'wb') as f:
-            f.write(compressed_data)
-    print('Decompressing', ifile)
-    data = bz2.decompress(compressed_data).decode('utf8')
-    
     d = []
     # local_start_count = {}
 
-    for r in data.strip().split('\n'):
-        c = r.split(':',2)
-        i = int(c[1])
-        title = html.unescape(c[2])
-        # for b in start_blacklist:
-            # if title.startswith(b):
-            #     if b not in local_start_count: local_start_count[b] = start_count[b]
-            #     local_start_count[b] += 1
+    with bz2.BZ2File(DOWNLOAD_DIR + ifile) as f:
+        for r in f:
+            r = r.decode('utf8').strip()
+            c = r.split(':',2)
+            i = int(c[1])
+            title = html.unescape(c[2])
+            # for b in start_blacklist:
+                # if title.startswith(b):
+                #     if b not in local_start_count: local_start_count[b] = start_count[b]
+                #     local_start_count[b] += 1
 
-        if not any(map(lambda b : title.startswith(b), start_blacklist)):
-            d.append({'title':title, '_id':i})
+            if not any(map(lambda b : title.startswith(b), start_blacklist)):
+                d.append({'title':title, '_id':i})
 
     page_db.insert_many(d)
     print('Added', ifile)
@@ -102,10 +88,20 @@ if __name__ == '__main__':
 
     print(len(index_files), 'files')
 
+    for ifile in index_files:
+        if not path.isfile(DOWNLOAD_DIR + ifile) or not path.getsize(DOWNLOAD_DIR + ifile) == files[ifile]['size']:
+            with open(DOWNLOAD_DIR + ifile, 'wb') as f:
+                r = requests.get(DOWNLOAD_URL + ifile, stream=True)
+                f.writelines(r.iter_content(1024))
+                print('Downloaded', ifile)
+
     manager = Manager()
     id_map = manager.dict()
     start_count = manager.dict()
     for b in start_blacklist: start_count[b] = 0
+
+    page_db.drop()
+    page_db.create_index([('title',1)])
 
     with Pool(8) as pool:
         pool.starmap(collect_index_file,[(i,files[i]['size']) for i in index_files])
