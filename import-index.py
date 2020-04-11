@@ -19,33 +19,9 @@ if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
 db_client = MongoClient('localhost', 27017)
 db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
 page_db = db.pages
+file_db = db.uploaded_files
 
 DOWNLOAD_URL = f"https://dumps.wikimedia.org/{DUMP_LANG}wiki/{DUMP_DATE}/"
-
-start_blacklist = [
-    # 'Talk:',
-    # 'User:',
-    # 'User talk:',
-    # 'Wikipedia:',
-    # 'Wikipedia talk:',
-    # 'File:',
-    # 'File talk:',
-    # 'MediaWiki:',
-    # 'MediaWiki talk:',
-    # 'Template:',
-    # 'Template talk:',
-    # 'Help:',
-    # 'Help talk:',
-    # 'Category talk:',
-    # 'Portal:',
-    # 'Portal talk:',
-    # 'Draft:',
-    # 'Draft talk:',
-    # 'TimedText:',
-    # 'TimedText talk:',
-    # 'Module:',
-    # 'Module talk:',
-]
 
 DOWNLOAD_DIR = 'downloads/'
 if not path.isdir(DOWNLOAD_DIR): 
@@ -70,8 +46,7 @@ def collect_index_file(ifile, size):
                 #     if b not in local_start_count: local_start_count[b] = start_count[b]
                 #     local_start_count[b] += 1
 
-            if not any(map(lambda b : title.startswith(b), start_blacklist)):
-                d.append({'title':title, '_id':i})
+            d.append({'title':title, '_id':i})
 
     page_db.insert_many(d)
     print('Added', ifile)
@@ -97,16 +72,13 @@ if __name__ == '__main__':
                 f.writelines(r.iter_content(1024))
                 print('Downloaded', ifile)
 
-    manager = Manager()
-    id_map = manager.dict()
-    start_count = manager.dict()
-    for b in start_blacklist: start_count[b] = 0
-
     page_db.drop()
+    file_db.drop()
     page_db.create_index([('title',1)])
 
     try:
         with Pool(8) as pool:
             pool.starmap(collect_index_file,[(i,files[i]['size']) for i in index_files])
-    finally:
+    except:
+        print('Import failed')
         page_db.drop()

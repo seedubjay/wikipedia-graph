@@ -56,6 +56,7 @@ def collect_data_file(ifile):
     redirect_page = False
     title = None
     links = None
+    namespace = None
     ignore_text = False
 
     pattern = re.compile(r"\[\[(.+?)\]\]")
@@ -75,21 +76,18 @@ def collect_data_file(ifile):
                 title = None
                 page_id = None
                 links = set()
+                namespace = None
                 continue
 
             if not ignore_page and not redirect_page:
-                if l.startswith('<text'):
-                    is_text = True
-                    ignore_text = False
-                    continue
-                if l.endswith('</text>'):
-                    is_text = False
-                    continue
                 if l.startswith('<title'):
                     title = html.unescape(l[7:-8])
                     x = page_db.find_one({'title': title}, {'_id':1})
                     if x is None: ignore_page = True
                     else: page_id = x['_id']
+                    continue
+                if l.startswith('<ns'):
+                    namespace = int(l[4:-5])
                     continue
                 if l.startswith('<redirect'):
                     redirect_page = True
@@ -105,8 +103,11 @@ def collect_data_file(ifile):
                     for i in links:
                         x = page_db.find_one({'title': i}, {'_id':1})
                         if x is not None: l.append(x['_id'])
-                    page_db.update_one({'_id': page_id}, {'$set': {'links': l}})
+                    page_db.update_one({'_id': page_id}, {'$set': {'namespace': namespace, 'links': l}})
                     continue
+                if l.startswith('<text'):
+                    is_text = True
+                    l = l.split('>',1)[1]
                 if is_text:
                     l = html.unescape(l)
                     if not ignore_text:
@@ -115,6 +116,8 @@ def collect_data_file(ifile):
                         m = pattern.findall(l)
                         m = list(map(lambda s : s.split('|')[0].split('#')[0],m))
                         links.update(m)
+                if l.endswith('</text>'):
+                    is_text = False
 
     # with open(TEMP_DIR + ifile + '-graph.pkl', 'wb') as f:
     #     pickle.dump(local_graph, f)

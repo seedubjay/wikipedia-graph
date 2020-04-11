@@ -20,40 +20,38 @@ if not path.isdir(RESULTS_DIR):
 pages = {}
 redirects = {}
 
-start_blacklist = [
-    'Talk:',
-    'User:',
-    'User talk:',
-    'Wikipedia:',
-    'Wikipedia talk:',
-    'File:',
-    'File talk:',
-    'MediaWiki:',
-    'MediaWiki talk:',
-    'Template:',
-    'Template talk:',
-    'Help:',
-    'Help talk:',
-    'Category:',
-    'Category talk:',
-    'Portal:',
-    'Portal talk:',
-    'Draft:',
-    'Draft talk:',
-    'TimedText:',
-    'TimedText talk:',
-    'Module:',
-    'Module talk:',
-]
+namespace = {
+    0:'Article',
+    1:'Talk',
+    2:'User',
+    3:'User talk',
+    4:'Wikipedia',
+    5:'Wikipedia talk',
+    6:'File',
+    7:'File talk',
+    8:'MediaWiki',
+    9:'MediaWiki talk',
+    10:'Template',
+    11:'Template talk',
+    12:'Help',
+    13:'Help talk',
+    14:'Category',
+    15:'Category talk',
+    100:'Portal',
+    101:'Portal talk',
+    118:'Draft',
+    119:'Draft talk',
+    710:'TimedText',
+    711:'TimedText talk',
+    828:'Module',
+    829:'Module talk',
+}
 
 with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-pages.csv", 'w') as f:
+    f.write('page_id:ID,title,url,:LABEL')
     for i in tqdm(page_db.find(),total=page_db.estimated_document_count()):
         if 'links' in i:
-            if len(pages) > 0: f.write('\n')
-            label = 'Article'
-            for b in start_blacklist:
-                if i['title'].startswith(b): label = b[:-1]
-            f.write(f"{i['_id']},\"{i['title']}\",{label}")
+            f.write(f"\n{i['_id']},\"{i['title']}\",\"{DUMP_LANG}.wikipedia.org/?curid={i['_id']}\",{namespace[i['namespace']]}")
             pages[i['_id']] = i['title']
             
         elif 'redirect' in i: redirects[i['_id']] = i['redirect']
@@ -68,7 +66,7 @@ for i in tqdm(redirects):
 batch = []
 
 with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links.csv", 'w') as f:
-    first_row = True
+    f.write(':START_ID,:END_ID,:TYPE')
     graph_db.drop()
     for i in tqdm(page_db.find({'links' : {'$exists' : 1}}, {'links':1}), total=len(pages)):
         n = {'_id': i['_id'], 'links' : []}
@@ -76,11 +74,5 @@ with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links.csv", 'w') as f:
             if l in redirects: l = redirects[l]
             if l in pages:
                 n['links'].append(l)
-                if not first_row: f.write('\n')
-                first_row = False
-                f.write(f"{i['_id']},{l},LINKS_TO")
-        batch.append(n)
-        if len(batch) == 100:
-            graph_db.insert_many(batch)
-            batch = []
-    graph_db.insert_many(batch)
+                f.write(f"\n{i['_id']},{l},LINKS_TO")
+        graph_db.insert_one(n)
