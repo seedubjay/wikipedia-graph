@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 import time
 from tqdm import tqdm 
+import os
 
 DUMP_LANG = 'sa'
 if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
