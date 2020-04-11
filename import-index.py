@@ -11,11 +11,12 @@ import html
 
 from pymongo import MongoClient
 
+DUMP_LANG = 'de'
+DUMP_DATE = '20200401'
+
 db_client = MongoClient('localhost', 27017)
 db = db_client.wikipedia
-
-DUMP_LANG = 'en'
-DUMP_DATE = '20200401'
+page_db = db[f"{DUMP_LANG}wiki-{DUMP_DATE}-pages"]
 
 DOWNLOAD_URL = f"https://dumps.wikimedia.org/{DUMP_LANG}wiki/{DUMP_DATE}/"
 
@@ -44,9 +45,9 @@ start_blacklist = [
     'Module talk:',
 ]
 
-INDEX_DIR = 'downloads/'
-if not path.isdir(INDEX_DIR): 
-    os.mkdir(INDEX_DIR)
+DOWNLOAD_DIR = 'downloads/'
+if not path.isdir(DOWNLOAD_DIR): 
+    os.mkdir(DOWNLOAD_DIR)
 
 RESULTS_DIR = 'results/'
 if not path.isdir(RESULTS_DIR): 
@@ -54,8 +55,8 @@ if not path.isdir(RESULTS_DIR):
 
 def collect_index_file(ifile, size):
     compressed_data = None
-    if path.isfile(INDEX_DIR + ifile):
-        with open(INDEX_DIR + ifile, 'rb') as f:
+    if path.isfile(DOWNLOAD_DIR + ifile):
+        with open(DOWNLOAD_DIR + ifile, 'rb') as f:
             compressed_data = f.read()
         if len(compressed_data) != size:
             print('Found corrupted', ifile)
@@ -64,8 +65,9 @@ def collect_index_file(ifile, size):
     if compressed_data is None:
         compressed_data = requests.get(DOWNLOAD_URL + ifile).content
         print('Downloaded', ifile)
-        with open(INDEX_DIR + ifile, 'wb') as f:
+        with open(DOWNLOAD_DIR + ifile, 'wb') as f:
             f.write(compressed_data)
+    print('Decompressing', ifile)
     data = bz2.decompress(compressed_data).decode('utf8')
     
     d = []
@@ -83,11 +85,18 @@ def collect_index_file(ifile, size):
         if not any(map(lambda b : title.startswith(b), start_blacklist)):
             d.append({'title':title, '_id':i})
 
-    db.pages.insert_many(d)
+    page_db.insert_many(d)
     print('Added', ifile)
 
 if __name__ == '__main__':
-    dumpstatus = requests.get(DOWNLOAD_URL + 'dumpstatus.json').json()
+    if not path.isfile(DOWNLOAD_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-dumpstatus.json"):
+        with open(DOWNLOAD_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-dumpstatus.json", 'wb') as f:
+            r = requests.get(DOWNLOAD_URL + 'dumpstatus.json', stream=True)
+            f.writelines(r.iter_content(1024))
+
+    with open(DOWNLOAD_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-dumpstatus.json") as f:
+        dumpstatus = json.load(f)
+    
     files = dumpstatus['jobs']['articlesmultistreamdump']['files']
     index_files = sorted(list(filter(lambda f : 'index' in f,files.keys())))
 

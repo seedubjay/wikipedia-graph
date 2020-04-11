@@ -16,11 +16,12 @@ import time
 
 from pymongo import MongoClient
 
+DUMP_LANG = 'de'
+DUMP_DATE = '20200401'
+
 db_client = MongoClient('localhost', 27017)
 db = db_client.wikipedia
-
-DUMP_LANG = 'en'
-DUMP_DATE = '20200401'
+page_db = db[f"{DUMP_LANG}wiki-{DUMP_DATE}-pages"]
 
 DOWNLOAD_URL = f"https://dumps.wikimedia.org/{DUMP_LANG}wiki/{DUMP_DATE}/"
 
@@ -93,25 +94,25 @@ def collect_data_file(ifile, size):
                     continue
                 if l.startswith('<title'):
                     title = html.unescape(l[7:-8])
-                    x = db.pages.find_one({'title': title}, {'_id':1})
+                    x = page_db.find_one({'title': title}, {'_id':1})
                     if x is None: ignore_page = True
                     else: page_id = x['_id']
                     continue
                 if l.startswith('<redirect'):
                     redirect_page = True
                     to = html.unescape(l[17:-4])
-                    x = db.pages.find_one({'title': to}, {'_id':1})
+                    x = page_db.find_one({'title': to}, {'_id':1})
                     if x is not None:
                         # local_redirects[page_ids[title]] = page_ids[to]
-                        db.pages.update_one({'_id': page_id}, {'$set': {'redirect': x['_id']}})
+                        page_db.update_one({'_id': page_id}, {'$set': {'redirect': x['_id']}})
                     continue
                 if l.endswith('</page>'):
                     #local_graph[page_ids[title]] = list(links)
                     l = []
                     for i in links:
-                        x = db.pages.find_one({'title': i}, {'_id':1})
+                        x = page_db.find_one({'title': i}, {'_id':1})
                         if x is not None: l.append(x['_id'])
-                    db.pages.update_one({'_id': page_id}, {'$set': {'links': l}})
+                    page_db.update_one({'_id': page_id}, {'$set': {'links': l}})
                     continue
                 if is_text:
                     l = html.unescape(l)
@@ -133,12 +134,12 @@ def collect_data_file(ifile, size):
     print('Finished', ifile, f"({count} pages)")#, {len(local_redirects)} redirects, {len(local_graph)} edge groups)")
 
 if __name__ == '__main__':
-    if not path.isfile(DOWNLOAD_DIR + 'dumpstatus.json'):
-        with open(DOWNLOAD_DIR + 'dumpstatus.json', 'wb') as f:
+    if not path.isfile(DOWNLOAD_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-dumpstatus.json"):
+        with open(DOWNLOAD_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-dumpstatus.json", 'wb') as f:
             r = requests.get(DOWNLOAD_URL + 'dumpstatus.json', stream=True)
             f.writelines(r.iter_content(1024))
 
-    with open(DOWNLOAD_DIR + 'dumpstatus.json') as f:
+    with open(DOWNLOAD_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-dumpstatus.json") as f:
         dumpstatus = json.load(f)
 
     files = dumpstatus['jobs']['articlesmultistreamdump']['files']
