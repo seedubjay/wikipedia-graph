@@ -16,15 +16,12 @@ import time
 
 from pymongo import MongoClient
 
-DUMP_LANG = 'sa'
+from wikidata_scanner import parse_data_file
+
+DUMP_LANG = 'en'
 if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
 DUMP_DATE = '20200401'
 if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
-
-db_client = MongoClient('localhost', 27017)
-db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
-page_db = db.pages
-file_db = db.uploaded_files
 
 DOWNLOAD_URL = f"https://dumps.wikimedia.org/{DUMP_LANG}wiki/{DUMP_DATE}/"
 
@@ -36,7 +33,13 @@ RESULTS_DIR = 'results/'
 if not path.isdir(RESULTS_DIR): 
     os.mkdir(RESULTS_DIR)
 
-def collect_data_file(ifile):
+def go(ifile):
+
+    db_client = MongoClient('localhost', 27017)
+    db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
+    page_db = db.pages
+    file_db = db.uploaded_files
+
     first_line = 0
     count = 0
     upload_info = file_db.find_one({'file': ifile})
@@ -48,86 +51,31 @@ def collect_data_file(ifile):
             return
         first_line = upload_info['line']
         count = upload_info['page_count']
+    
+    ids = {}
+    if path.isfile(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-index.pkl"):
+        with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-index.pkl", 'rb') as f:
+            ids = pickle.load(f)
+    else:
+        for i in tqdm(page_db.find({},{'title':1}),total=page_db.estimated_document_count()):
+            ids[i['title']] = i['_id']
+
+    def getID(title):
+        if title in ids: return ids[title]
+        return None
 
     print('Processing', ifile, 'from line', first_line)
 
-    is_text = False
-    ignore_page = False
-    redirect_page = False
-    title = None
-    links = None
-    namespace = None
-    ignore_text = False
-
-    pattern = re.compile(r"\[\[(.+?)\]\]")
-
-    with bz2.BZ2File(DOWNLOAD_DIR + ifile) as f:
-        for (line_count,l) in enumerate(f):
-            if line_count < first_line: continue
-
-            l = l.decode('utf8').strip()
-            if l.startswith('<page'):
-                if count % 100 == 0: 
-                    file_db.update_one({'file': ifile},{'$set' : {'line': line_count, 'page_count': count}})
-                count += 1
-                
-                ignore_page = False
-                redirect_page = False
-                title = None
-                page_id = None
-                links = set()
-                namespace = None
-                continue
-
-            if not ignore_page and not redirect_page:
-                if l.startswith('<title'):
-                    title = html.unescape(l[7:-8])
-                    x = page_db.find_one({'title': title}, {'_id':1})
-                    if x is None: ignore_page = True
-                    else: page_id = x['_id']
-                    continue
-                if l.startswith('<ns'):
-                    namespace = int(l[4:-5])
-                    continue
-                if l.startswith('<redirect'):
-                    redirect_page = True
-                    to = html.unescape(l[17:-4])
-                    x = page_db.find_one({'title': to}, {'_id':1})
-                    if x is not None:
-                        # local_redirects[page_ids[title]] = page_ids[to]
-                        page_db.update_one({'_id': page_id}, {'$set': {'redirect': x['_id']}})
-                    continue
-                if l.endswith('</page>'):
-                    #local_graph[page_ids[title]] = list(links)
-                    l = []
-                    for i in links:
-                        x = page_db.find_one({'title': i}, {'_id':1})
-                        if x is not None: l.append(x['_id'])
-                    page_db.update_one({'_id': page_id}, {'$set': {'namespace': namespace, 'links': l}})
-                    continue
-                if l.startswith('<text'):
-                    is_text = True
-                    l = l.split('>',1)[1]
-                if is_text:
-                    l = html.unescape(l)
-                    if not ignore_text:
-                        l = re.sub(r"<ref>.*?</ref>","<<REF>>",l)
-                        l = l.replace("_"," ")
-                        m = pattern.findall(l)
-                        m = list(map(lambda s : s.split('|')[0].split('#')[0],m))
-                        links.update(m)
-                if l.endswith('</text>'):
-                    is_text = False
-
-    # with open(TEMP_DIR + ifile + '-graph.pkl', 'wb') as f:
-    #     pickle.dump(local_graph, f)
-    
-    # with open(TEMP_DIR + ifile + '-redirects.pkl', 'wb') as f:
-    #     pickle.dump(local_redirects, f)
+    for i in parse_data_file(DOWNLOAD_DIR + ifile,getID,first_line):
+        count += 1
+        if count % 100 == 0 and 'line_count' in i:
+            file_db.update_one({'file': ifile},{'$set' : {'line': i['line_count'], 'page_count': count}})
+        page_db.update_one({'_id': i['page']['_id']}, {'$set': i['page']})
 
     db.uploaded_files.update_one({'file':ifile},{'$set': {'page_count': count}, '$unset': {'line':0}})
 
     print('Finished', ifile, f"({count} pages)")#, {len(local_redirects)} redirects, {len(local_graph)} edge groups)")
+
 
 if __name__ == '__main__':
     if not path.isfile(DOWNLOAD_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-dumpstatus.json"):
@@ -141,9 +89,6 @@ if __name__ == '__main__':
     files = dumpstatus['jobs']['articlesmultistreamdump']['files']
     data_pages = sorted(list(filter(lambda f : 'index' not in f,files.keys())))
 
-    # with open(RESULTS_DIR + 'index.pkl', 'rb') as f:
-    #     page_ids = pickle.load(f)
-
     for ifile in data_pages:
         if not path.isfile(DOWNLOAD_DIR + ifile) or not path.getsize(DOWNLOAD_DIR + ifile) == files[ifile]['size']:
             with open(DOWNLOAD_DIR + ifile, 'wb') as f:
@@ -151,6 +96,8 @@ if __name__ == '__main__':
                 r = requests.get(DOWNLOAD_URL + ifile, stream=True)
                 f.writelines(r.iter_content(1024))
 
-    with Pool(16) as pool:
-        pool.map(collect_data_file,data_pages)
+    data_pages.sort(key= lambda f : files[f]['size'], reverse=True)
+
+    with Pool(4) as pool:
+        pool.map(go,data_pages)
             

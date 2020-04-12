@@ -3,7 +3,7 @@ from tqdm import tqdm
 from os import path
 import os
 
-DUMP_LANG = 'sa'
+DUMP_LANG = 'en'
 if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
 DUMP_DATE = '20200401'
 if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
@@ -39,6 +39,8 @@ namespace = {
     15:'Category talk',
     100:'Portal',
     101:'Portal talk',
+    108:'Book',
+    109:'Book talk',
     118:'Draft',
     119:'Draft talk',
     710:'TimedText',
@@ -51,7 +53,8 @@ with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-pages.csv", 'w') as f:
     f.write('page_id:ID,title,url,:LABEL')
     for i in tqdm(page_db.find(),total=page_db.estimated_document_count()):
         if 'links' in i:
-            f.write(f"\n{i['_id']},\"{i['title']}\",\"{DUMP_LANG}.wikipedia.org/?curid={i['_id']}\",{namespace[i['namespace']]}")
+            if i['namespace'] not in namespace: print(i['title'], i['namespace'])
+            else: f.write(f"\n{i['_id']},\"{i['title']}\",\"{DUMP_LANG}.wikipedia.org/?curid={i['_id']}\",{namespace[i['namespace']]}")
             pages[i['_id']] = i['title']
             
         elif 'redirect' in i: redirects[i['_id']] = i['redirect']
@@ -69,7 +72,7 @@ with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links.csv", 'w') as f:
     f.write(':START_ID,:END_ID,:TYPE')
     graph_db.drop()
     for i in tqdm(page_db.find({'links' : {'$exists' : 1}}, {'links':1}), total=len(pages)):
-        n = {'_id': i['_id'], 'links' : []}
+        n = {'_id': i['_id'], 'links' : [], 'namespace': i['namespace']}
         for l in i['links']:
             if l in redirects: l = redirects[l]
             if l in pages:

@@ -3,7 +3,7 @@ import time
 from tqdm import tqdm 
 import os
 
-DUMP_LANG = 'sa'
+DUMP_LANG = 'en'
 if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
 DUMP_DATE = '20200401'
 if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
@@ -18,7 +18,7 @@ def page_count():
 
 count = page_count()
 
-with tqdm(initial=count, total=page_db.estimated_document_count()) as pbar:
+with tqdm(initial=count, total=page_db.estimated_document_count(), smoothing=0.1) as pbar:
     while True:
         time.sleep(.2)
         prev = count

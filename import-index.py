@@ -8,10 +8,11 @@ from multiprocessing import Pool, Manager
 from functools import partial
 import pickle
 import html
-
+from tqdm import tqdm
+import shutil
 from pymongo import MongoClient
 
-DUMP_LANG = 'sa'
+DUMP_LANG = 'en'
 if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
 DUMP_DATE = '20200401'
 if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
@@ -72,7 +73,10 @@ if __name__ == '__main__':
                 f.writelines(r.iter_content(1024))
                 print('Downloaded', ifile)
 
+    index_filename = RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-index.pkl"
+
     page_db.drop()
+    if path.isfile(index_filename): os.remove(index_filename)
     file_db.drop()
     page_db.create_index([('title',1)])
 
@@ -82,3 +86,11 @@ if __name__ == '__main__':
     except:
         print('Import failed')
         page_db.drop()
+
+    print('Pickling IDs')
+    ids = {}
+    for i in tqdm(page_db.find({},{'title':1}),total=page_db.estimated_document_count()):
+        ids[i['title']] = i['_id']
+    
+    with open(index_filename, 'wb') as f:
+        pickle.dump(ids,f)
