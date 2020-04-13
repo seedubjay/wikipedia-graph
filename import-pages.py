@@ -33,7 +33,7 @@ RESULTS_DIR = 'results/'
 if not path.isdir(RESULTS_DIR): 
     os.mkdir(RESULTS_DIR)
 
-def go(ifile):
+def go(ids, ifile):
 
     db_client = MongoClient('localhost', 27017)
     db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
@@ -51,18 +51,37 @@ def go(ifile):
             return
         first_line = upload_info['line']
         count = upload_info['page_count']
-    
-    ids = {}
-    if path.isfile(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-index.pkl"):
-        with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-index.pkl", 'rb') as f:
-            ids = pickle.load(f)
-    else:
-        for i in tqdm(page_db.find({},{'title':1}),total=page_db.estimated_document_count()):
-            ids[i['title']] = i['_id']
 
     def getID(title):
         if title in ids: return ids[title]
         return None
+
+    # cache_chances = 1
+    # cache_size = 1e8
+    # caches = [{} for _ in range(cache_chances+1)]
+
+    # hit = 0
+    # query = 0
+
+    # def getID(title):
+    #     nonlocal hit
+    #     nonlocal query
+    #     query += 1
+    #     if len(caches[0]) > cache_size:
+    #         for i in range(0,cache_chances):
+    #             caches[cache_chances-i] = caches[cache_chances-i-1]
+    #         caches[0] = {}
+    #         print('wipe cache')
+    #     for (i,c) in enumerate(caches):
+    #         if title in c:
+    #             if i > 0: caches[0][title] = c[title]
+    #             hit += 1
+    #             break
+    #     if title not in caches[0]:
+    #         x = page_db.find_one({'title': title},{'_id':1})
+    #         caches[0][title] = None if x is None else x['_id']
+    #     if query % 100 == 0: print(f"  {round(hit/query*1000)/10}%\033[F            ")
+    #     return caches[0][title]
 
     print('Processing', ifile, 'from line', first_line)
 
@@ -98,6 +117,22 @@ if __name__ == '__main__':
 
     data_pages.sort(key= lambda f : files[f]['size'], reverse=True)
 
-    with Pool(4) as pool:
-        pool.map(go,data_pages)
-            
+    with Manager() as manager:
+        ids = manager.dict()
+        if path.isfile(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-index.pkl"):
+            print('load index from file')
+            with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-index.pkl", 'rb') as f:
+                d = pickle.load(f)
+                for i in tqdm(d):
+                    ids[i] = d[i]
+                del d
+        else:
+            db_client = MongoClient('localhost', 27017)
+            db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
+            page_db = db.pages
+            print('load index from mongodb')
+            for i in tqdm(page_db.find({},{'title':1}), total=page_db.estimated_document_count()):
+                ids[i['title']] = i['_id']
+    
+        with Pool(10) as pool:
+            pool.map(partial(go,ids),data_pages)

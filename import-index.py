@@ -86,6 +86,7 @@ if __name__ == '__main__':
     except:
         print('Import failed')
         page_db.drop()
+        raise
 
     print('Pickling IDs')
     ids = {}
