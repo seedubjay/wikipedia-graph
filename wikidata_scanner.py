@@ -62,7 +62,8 @@ def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
                 if l.startswith('<title'):
                     title = html.unescape(l[7:-8])
                     page_id = getID(title)
-                    assert page_id is not None
+                    if page_id is None: print(title,'missing')
+                    assert page_id is not None, f"{title} in {ifile}"
                     continue
                 if l.startswith('<ns>'):
                     namespace = int(l[4:-5])
@@ -126,24 +127,22 @@ if __name__ == '__main__':
     page_db = db.pages
     file_db = db.uploaded_files
 
-    # ids = {}
-    # for i in tqdm(page_db.find({},{'title':1}),total=page_db.estimated_document_count()):
-    #     ids[i['title']] = i['_id']
-
-    # def getID(title):
-    #     if title in ids: return ids[title]
-    #     return None
+    ids = {}
+    for i in tqdm(page_db.find({},{'title':1}),total=page_db.estimated_document_count()):
+        ids[i['title']] = i['_id']
 
     def getID(title):
-        x = page_db.find_one({'title': title}, {'_id':1})
-        if x is None: return None
-        return x['_id']
+        if title in ids: return ids[title]
+        return None
+
+    # def getID(title):
+    #     x = page_db.find_one({'title': title}, {'_id':1})
+    #     if x is None: return None
+    #     return x['_id']
 
     start_time = time.time()
 
-    for i in parse_data_file(ifile, getID):
-        print(i['page'])
-        if 'links' in i['page']: break
+    for i in tqdm(parse_data_file(ifile, getID)): pass
 
     # times = {
     #     'decode': lambda:decode_time,
