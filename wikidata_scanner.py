@@ -59,17 +59,19 @@ def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
 
             if not ignore_page and not redirect_page:
                 if timed: probe_time -= time.time()
-                # if l.startswith('<title'):
-                #     title = html.unescape(l[7:-8])
-                #     continue
+                if l.startswith('<title'):
+                    title = html.unescape(l[7:-8])
+                    page_id = getID(title)
+                    assert page_id is not None
+                    continue
                 if l.startswith('<ns>'):
                     namespace = int(l[4:-5])
                     if timed: probe_time += time.time()
                     continue
-                if l.startswith('<id>'):
-                    page_id = int(l[4:-5])
-                    if timed: probe_time += time.time()
-                    continue
+                # if l.startswith('<id>'):
+                #     page_id = int(l[4:-5])
+                #     if timed: probe_time += time.time()
+                #     continue
                 if l.startswith('<redirect'):
                     redirect_page = True
                     to = html.unescape(l[17:-4])
@@ -112,7 +114,7 @@ def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
             yield {'page': page}
 
 if __name__ == '__main__':
-    ifile = 'downloads/dewiki-20200401-pages-articles-multistream2.xml-p262469p1095940.bz2'
+    ifile = 'downloads/enwiki-20200401-pages-articles-multistream1.xml-p1p30303.bz2'
 
     DUMP_LANG = 'en'
     if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
@@ -139,20 +141,22 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    for i in parse_data_file(ifile, getID): pass
+    for i in parse_data_file(ifile, getID):
+        print(i['page'])
+        if 'links' in i['page']: break
 
-    times = {
-        'decode': lambda:decode_time,
-        'text': lambda:text_time,
-        'loop': lambda:loop_time,
-        'id': lambda:id_time,
-        'probe': lambda:probe_time,
-    }
+    # times = {
+    #     'decode': lambda:decode_time,
+    #     'text': lambda:text_time,
+    #     'loop': lambda:loop_time,
+    #     'id': lambda:id_time,
+    #     'probe': lambda:probe_time,
+    # }
 
-    print('\n'*len(times))
-    for (count,i) in enumerate(parse_data_file(ifile, getID,verbose=False,timed=True)):
-        total_time = time.time() - start_time
-        print('\033[F'*(len(times)+1),end='')
-        for t in times:
-            print(f"{t}: {round(times[t]()/total_time*10000)/100}%")
-        print(f"{round(count/total_time)} it/s")
+    # print('\n'*len(times))
+    # for (count,i) in enumerate(parse_data_file(ifile, getID,verbose=False,timed=True)):
+    #     total_time = time.time() - start_time
+    #     print('\033[F'*(len(times)+1),end='')
+    #     for t in times:
+    #         print(f"{t}: {round(times[t]()/total_time*10000)/100}%")
+    #     print(f"{round(count/total_time)} it/s")

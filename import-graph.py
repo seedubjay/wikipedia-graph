@@ -53,9 +53,8 @@ with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-pages.csv", 'w') as f:
     f.write('page_id:ID,title,url,:LABEL')
     for i in tqdm(page_db.find(),total=page_db.estimated_document_count()):
         if 'links' in i:
-            if i['namespace'] not in namespace: print(i['title'], i['namespace'])
-            else: f.write(f"\n{i['_id']},\"{i['title']}\",\"{DUMP_LANG}.wikipedia.org/?curid={i['_id']}\",{namespace[i['namespace']]}")
-            pages[i['_id']] = i['title']
+            f.write(f"\n{i['_id']},\"{i['title']}\",\"{DUMP_LANG}.wikipedia.org/?curid={i['_id']}\",{namespace[i['namespace']]}")
+            pages[i['_id']] = i
             
         elif 'redirect' in i: redirects[i['_id']] = i['redirect']
 
@@ -71,7 +70,7 @@ batch = []
 with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links.csv", 'w') as f:
     f.write(':START_ID,:END_ID,:TYPE')
     graph_db.drop()
-    for i in tqdm(page_db.find({'links' : {'$exists' : 1}}, {'links':1}), total=len(pages)):
+    for i in tqdm(pages):
         n = {'_id': i['_id'], 'links' : [], 'namespace': i['namespace']}
         for l in i['links']:
             if l in redirects: l = redirects[l]
