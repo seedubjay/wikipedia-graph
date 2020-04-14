@@ -107,7 +107,7 @@ if __name__ == '__main__':
             ids[i['title']] = i['_id']
 
     mp.set_start_method('fork')
-    semaphore = Semaphore(12)
+    semaphore = Semaphore(6)
     processes = []
     for i in data_pages:
         semaphore.acquire()

@@ -5,6 +5,7 @@ from tqdm import tqdm
 from pymongo import MongoClient
 import os
 import time
+import sys
 
 loop_time = 0
 decode_time = 0
@@ -31,6 +32,7 @@ def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
         namespace = None
         ignore_text = False
         page = None
+        page_id = None
 
         if timed: loop_time -= time.time()
 
@@ -58,21 +60,24 @@ def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
                 continue
 
             if not ignore_page and not redirect_page:
-                if timed: probe_time -= time.time()
-                if l.startswith('<title'):
-                    title = html.unescape(l[7:-8])
-                    page_id = getID(title)
-                    if page_id is None: print(title,'missing')
-                    assert page_id is not None, f"{title} in {ifile}"
+                # if timed: probe_time -= time.time()
+                # if l.startswith('<title'):
+                #     for i in l: print(ord(i))
+
+                #     title = html.unescape(l[7:-8])
+                #     for i in title: print(ord(i))
+                #     title = re.sub('\x85','\\n',title)
+                #     for i in title: print(ord(i))
+                #     page_id = getID(title)
+                #     #assert page_id is not None, f"{bytes(l[7:-8],'utf8')}/{title} in {ifile}:{line_count}"
+                #     continue
+                if l.startswith('<id') and page_id is None:
+                    page_id = int(l[4:-5])
                     continue
                 if l.startswith('<ns>'):
                     namespace = int(l[4:-5])
                     if timed: probe_time += time.time()
                     continue
-                # if l.startswith('<id>'):
-                #     page_id = int(l[4:-5])
-                #     if timed: probe_time += time.time()
-                #     continue
                 if l.startswith('<redirect'):
                     redirect_page = True
                     to = html.unescape(l[17:-4])
@@ -90,6 +95,8 @@ def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
                         if x := getID(i): l.append(x)
                     if timed: id_time += time.time()
                     assert page is None
+                    assert page_id is not None
+                    assert namespace is not None
                     page = {'_id': page_id, 'namespace': namespace, 'links': l}
                     if timed: probe_time += time.time()
                     continue
@@ -104,7 +111,6 @@ def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
                         l = l.replace("_"," ")
                         m = pattern.findall(l)
                         m = list(map(lambda s : s.split('|')[0].split('#')[0],m))
-                        if links is None: print(ifile, line_count)
                         links.update(m)
                 if l.endswith('</text>'):
                     is_text = False
@@ -115,7 +121,7 @@ def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
             yield {'page': page}
 
 if __name__ == '__main__':
-    ifile = 'downloads/enwiki-20200401-pages-articles-multistream1.xml-p1p30303.bz2'
+    ifile = 'downloads/enwiki-20200401-pages-articles-multistream23.xml-p28323661p29823660.bz2'
 
     DUMP_LANG = 'en'
     if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
@@ -130,6 +136,8 @@ if __name__ == '__main__':
     ids = {}
     for i in tqdm(page_db.find({},{'title':1}),total=page_db.estimated_document_count()):
         ids[i['title']] = i['_id']
+    
+    print(sys.getsizeof(ids))
 
     def getID(title):
         if title in ids: return ids[title]
