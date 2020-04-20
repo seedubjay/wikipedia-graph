@@ -36,7 +36,7 @@ namespace = {
     # 11:'Template talk',
     # 12:'Help',
     # 13:'Help talk',
-    14:'Category',
+    # 14:'Category',
     # 15:'Category talk',
     # 100:'Portal',
     # 101:'Portal talk',
@@ -70,20 +70,25 @@ for i in tqdm(redirects):
 
 batch = []
 
+update_mongodb = False
+
 with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links-neo4j.csv", 'w') as fneo4j:
-    with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links.csv", 'w') as f:
-        fneo4j.write(':START_ID,:END_ID,:TYPE')
-        graph_db.drop()
-        for i in tqdm(page_db.find({'links':{'$exists':1}}),total=page_db.estimated_document_count()-len(redirects)):
-            n = {'_id': i['_id'], 'links' : [], 'namespace': i['namespace']}
-            for l in i['links']:
-                if l in redirects: l = redirects[l]
-                if l in ids:
-                    n['links'].append(l)
-                    fneo4j.write(f"\n{i['_id']},{l},LINKS_TO")
-                    f.write(f"{i['_id']},{l}\n")
-            batch.append(n)
-            if len(batch) % 1000 == 0:
-                graph_db.insert_many(batch)
-                batch = []
-        graph_db.insert_many(batch)
+    with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links-adjlist.csv", 'w') as fadj:
+        with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links-edgelist.csv", 'w') as f:
+            fneo4j.write(':START_ID,:END_ID,:TYPE')
+            if update_mongodb: graph_db.drop()
+            for i in tqdm(page_db.find({'links':{'$exists':1}}),total=page_db.estimated_document_count()-len(redirects)):
+                n = {'_id': i['_id'], 'links' : [], 'namespace': i['namespace']}
+                for l in i['links']:
+                    if l in redirects: l = redirects[l]
+                    if l in ids and l != i['_id']:
+                        n['links'].append(l)
+                        fneo4j.write(f"\n{i['_id']},{l},LINKS_TO")
+                        f.write(f"{i['_id']} {l}\n")
+                        
+                if len(n['links']) > 0: fadj.write(' '.join(map(str,[n['_id']] + n['links'])) + '\n')
+                if update_mongodb: batch.append(n)
+                if len(batch) == 1000:
+                    graph_db.insert_many(batch)
+                    batch = []
+            if len(batch) > 0: graph_db.insert_many(batch)

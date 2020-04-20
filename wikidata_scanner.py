@@ -6,12 +6,29 @@ from pymongo import MongoClient
 import os
 import time
 import sys
+import pickle
 
 loop_time = 0
 decode_time = 0
 text_time = 0
 id_time = 0
 probe_time = 0
+
+# take first item in {i|...} and pass ... to functional to get list of links
+template_links_with_args = {
+    'main': lambda s:s.split('|'),
+    'main list': lambda s:s.split('|'),
+    'further': lambda s:s.split('|'),
+    'See also': lambda s:s.split('|'),
+    'details': lambda s:s.split('|'),
+    'Redirect': lambda s: s.split('|')[2::2] if '|' in s else [s+' (disambiguation)'],
+}
+
+template_links = {}
+with open('resources/country-codes.pkl', 'rb') as f:
+    d = pickle.load(f)
+    for i in d:
+        template_links[i] = [d[i]]
 
 def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
     
@@ -23,6 +40,7 @@ def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
         global probe_time
 
     pattern = re.compile(r"\[\[((?:(?!\[\[).)+?)\]\]")
+    template_pattern = re.compile(r"{{((?:(?!{{).)+?)}}")
 
     with bz2.BZ2File(ifile) as f:
         is_text = False
@@ -92,6 +110,7 @@ def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
                     l = []
                     if timed: id_time -= time.time()
                     for i in links:
+                        if '#' in i: i = i.split('#',1)[0]
                         if x := getID(i): l.append(x)
                     if timed: id_time += time.time()
                     assert page is None
@@ -110,8 +129,19 @@ def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
                         l = re.sub(r"<ref>.*?</ref>","<<REF>>",l)
                         l = l.replace("_"," ")
                         m = pattern.findall(l)
-                        m = list(map(lambda s : s.split('|')[0].split('#')[0],m))
+                        m = list(map(lambda s : s.split('|')[0],m))
                         links.update(m)
+                        t = template_pattern.findall(l)
+                        for i in t:
+                            if '|' in i:
+                                a,b = i.split('|',1)
+                                if a in template_links_with_args:
+                                    #print(page_id, a, template_links_with_args[a](b))
+                                    links.update(template_links_with_args[a](b))
+                            elif i in template_links:
+                                #print(page_id, i, template_links[i])
+                                links.update(template_links[i])
+                                
                 if l.endswith('</text>'):
                     is_text = False
                 if timed: text_time += time.time()
@@ -133,20 +163,20 @@ if __name__ == '__main__':
     page_db = db.pages
     file_db = db.uploaded_files
 
-    ids = {}
-    for i in tqdm(page_db.find({},{'title':1}),total=page_db.estimated_document_count()):
-        ids[i['title']] = i['_id']
+    # ids = {}
+    # for i in tqdm(page_db.find({},{'title':1}),total=page_db.estimated_document_count()):
+    #     ids[i['title']] = i['_id']
     
-    print(sys.getsizeof(ids))
-
-    def getID(title):
-        if title in ids: return ids[title]
-        return None
+    # print(sys.getsizeof(ids))
 
     # def getID(title):
-    #     x = page_db.find_one({'title': title}, {'_id':1})
-    #     if x is None: return None
-    #     return x['_id']
+    #     if title in ids: return ids[title]
+    #     return None
+
+    def getID(title):
+        x = page_db.find_one({'title': title}, {'_id':1})
+        if x is None: return None
+        return x['_id']
 
     start_time = time.time()
 
