@@ -1,7 +1,7 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-#define adjfile "../results/sawiki-20200401-links-adjlist.csv"
+const char *adjfile = "../results/sawiki-20200401-links-adjlist.csv";
 
 map<int,vector<int> > adj;
 

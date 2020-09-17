@@ -1,3 +1,5 @@
+# helper function to parse all links from wikipedia page
+
 import bz2
 import html
 import re
@@ -112,6 +114,8 @@ def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
                     for i in links:
                         if '#' in i: i = i.split('#',1)[0]
                         if x := getID(i): l.append(x)
+                        elif len(i) > 0:
+                            if x := getID(i[0].upper() + i[1:]): l.append(x)
                     if timed: id_time += time.time()
                     assert page is None
                     assert page_id is not None
@@ -151,11 +155,11 @@ def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
             yield {'page': page}
 
 if __name__ == '__main__':
-    ifile = 'downloads/enwiki-20200401-pages-articles-multistream23.xml-p28323661p29823660.bz2'
+    ifile = 'downloads/enwiki-20200901-pages-articles-multistream2.xml-p30304p88444.bz2'
 
     DUMP_LANG = 'en'
     if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
-    DUMP_DATE = '20200401'
+    DUMP_DATE = '20200901'
     if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
 
     db_client = MongoClient('localhost', 27017)
@@ -180,7 +184,9 @@ if __name__ == '__main__':
 
     start_time = time.time()
 
-    for i in tqdm(parse_data_file(ifile, getID)): pass
+    for i in parse_data_file(ifile, getID, 4994196):
+        print(i)
+        break
 
     # times = {
     #     'decode': lambda:decode_time,

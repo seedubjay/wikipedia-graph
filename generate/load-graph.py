@@ -6,7 +6,7 @@ import csv
 
 DUMP_LANG = 'en'
 if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
-DUMP_DATE = '20200401'
+DUMP_DATE = '20200901'
 if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
 
 db_client = MongoClient('localhost', 27017)
@@ -62,15 +62,17 @@ with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-pages.csv", 'w') as f:
         elif 'redirect' in i: redirects[i['_id']] = i['redirect']
 
 for i in tqdm(redirects):
+    seen = set()
     j = i
     while j in redirects:
-        if j == redirects[j]: break
+        if j in seen: break
+        seen.add(j)
         j = redirects[j]
     redirects[i] = j
 
 batch = []
 
-update_mongodb = False
+update_mongodb = True
 
 with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links-neo4j.csv", 'w') as fneo4j:
     with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links-adjlist.csv", 'w') as fadj:
