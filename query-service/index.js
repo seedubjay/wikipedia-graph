@@ -73,6 +73,8 @@ app.get("/wikipedia-route/pages", (req,res) => {
 
 app.get("/wikipedia-route/:source/:target", (req, res) => {
     let {source, target} = req.params;
+    source = parseInt(source);
+    target = parseInt(target)
     console.info(`route query: ${source} ${target}`)
     res.json(deepening_path(source,target))
 });
