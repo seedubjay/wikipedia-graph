@@ -1,5 +1,8 @@
-let express = require("express");
-let cors = require("cors");
+const express = require("express");
+const cors = require("cors");
+const logdna = require("@logdna/logger");
+
+let logger = logdna.createLogger()
 let app = express();
 
 let port = process.env.PORT || 3000;
@@ -16,8 +19,9 @@ app.get("/wikipedia-route/pages", (req,res) => {
 })
 
 app.get("/wikipedia-route/:source/:target", (req, res) => {
-    res.json([req.params.source, req.params.target])
-    
+    let {source, target} = req.params;
+    console.info(`route query: ${source} ${target}`)
+    res.json(["Australia", "United Kingdom", "Ireland"])
 });
 
 app.listen(port, () => {
