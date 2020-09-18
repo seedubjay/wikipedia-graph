@@ -39,8 +39,6 @@ function path(source, target) {
     return soln.map(i => labels[i]).reverse();
 }
 
-console.log(path(32771, 12))
-
 let app = express();
 app.use(cors());
 
@@ -51,7 +49,7 @@ app.get("/wikipedia-route/pages", (req,res) => {
 app.get("/wikipedia-route/:source/:target", (req, res) => {
     let {source, target} = req.params;
     console.info(`route query: ${source} ${target}`)
-    res.json(["Australia", "United Kingdom", "Ireland"])
+    res.json(path(source,target))
 });
 
 app.listen(port, () => {
