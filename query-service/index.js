@@ -16,6 +16,7 @@ console.info('Loaded graph')
 
 function dfs(node, depth, path, target) {
     path.push(node)
+    console.log(path);
     if (node === target) return path;
     if (depth) {
         for (e of edges.get(node)) {
@@ -59,6 +60,8 @@ function path(source, target) {
 
     return soln.map(i => labels.get(i)).reverse();
 }
+
+console.log(deepening_path(65546, 32897));
 
 let app = express();
 app.use(cors());
