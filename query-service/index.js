@@ -19,10 +19,8 @@ console.info('Loaded graph')
 
 function dfs(node, depth, path, target) {
     path.push(node)
-    console.log(path);
     if (node === target) return path;
     if (depth) {
-        console.log(app.locals.edges.get(node));
         for (e of app.locals.edges.get(node)) {
             let a = dfs(e, depth-1, path, target);
             if (a) return a;
