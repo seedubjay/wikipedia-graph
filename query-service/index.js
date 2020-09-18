@@ -17,6 +17,7 @@ console.info('Loaded graph')
 function dfs(node, depth, path, target) {
     path.push(node)
     console.log(path);
+    console.log(edges.get(node));
     if (node === target) return path;
     if (depth) {
         for (e of edges.get(node)) {
