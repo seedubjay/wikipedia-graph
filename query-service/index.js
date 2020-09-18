@@ -4,23 +4,25 @@ const cors = require("cors");
 
 let port = process.env.PORT || 3000;
 
+let app = express();
+app.use(cors());
+
 let data = JSON.parse(fs.readFileSync('./graph.json', {encoding:'utf8', flag:'r'}));
-let labels = new Map()
-let edges = new Map()
+app.locals.labels = new Map()
+app.locals.edges = new Map()
 for (x of data.nodes) {
-    labels.set(x.id, x.label);
-    edges.set(x.id, []);
+    app.locals.labels.set(x.id, x.label);
+    app.locals.edges.set(x.id, []);
 }
-for (x of data.edges) edges.get(x.source).push(x.target);
+for (x of data.edges) app.locals.edges.get(x.source).push(x.target);
 console.info('Loaded graph')
 
 function dfs(node, depth, path, target) {
     path.push(node)
     console.log(path);
-    console.log(edges.get(node));
     if (node === target) return path;
     if (depth) {
-        for (e of edges.get(node)) {
+        for (e of app.locals.edges.get(node)) {
             let a = dfs(e, depth-1, path, target);
             if (a) return a;
         }
@@ -32,7 +34,7 @@ function dfs(node, depth, path, target) {
 function deepening_path(source, target) {
     for (let i = 0; i < 50; i++) {
         let p = dfs(source, i, [], target);
-        if (p) return p.map(i => labels.get(i));
+        if (p) return p.map(i => app.locals.labels.get(i));
     }
     return null;
 }
@@ -63,9 +65,6 @@ function path(source, target) {
 }
 
 console.log(deepening_path(65546, 32897));
-
-let app = express();
-app.use(cors());
 
 app.get("/wikipedia-route/pages", (req,res) => {
     res.json(pages);
