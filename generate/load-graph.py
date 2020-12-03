@@ -1,18 +1,12 @@
 # takes page database and generates graph database, .gt file for jupyter and neo4j files
 
-from pymongo import MongoClient
 from tqdm import tqdm
 from os import path
 import os
 import csv
 
-DUMP_LANG = 'en'
-if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
-DUMP_DATE = '20200901'
-if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
+from db import db, DUMP_LANG, DUMP_DATE
 
-db_client = MongoClient('localhost', 27017)
-db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
 page_db = db.pages
 graph_db = db.graph
 

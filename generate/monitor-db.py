@@ -3,13 +3,8 @@ import time
 from tqdm import tqdm 
 import os
 
-DUMP_LANG = 'en'
-if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
-DUMP_DATE = '20200401'
-if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
+from db import db
 
-db_client = MongoClient('localhost', 27017)
-db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
 page_db = db.pages
 file_db = db.uploaded_files
 

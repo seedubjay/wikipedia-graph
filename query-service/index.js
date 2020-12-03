@@ -8,13 +8,14 @@ let app = express();
 app.use(cors());
 
 let data = JSON.parse(fs.readFileSync('./graph.json', {encoding:'utf8', flag:'r'}));
+app.locals.pages = data.nodes
 app.locals.labels = new Map()
 app.locals.edges = new Map()
 for (x of data.nodes) {
     app.locals.labels.set(x.id, x.label);
     app.locals.edges.set(x.id, []);
 }
-for (x of data.edges) app.locals.edges.get(x.source).push(x.target);
+for (x of data.edges) app.locals.edges.get(x[0]).push(x[1]);
 console.info('Loaded graph')
 
 function dfs(node, depth, path, target) {
@@ -38,8 +39,8 @@ function path(source, target) {
     return null;
 }
 
-app.get("/wikipedia-route/pages", (req,res) => {
-    res.json(pages);
+app.get("/wikipedia-route/hello", (req,res) => {
+    res.json(app.locals.pages);
 })
 
 app.get("/wikipedia-route/:source/:target", (req, res) => {

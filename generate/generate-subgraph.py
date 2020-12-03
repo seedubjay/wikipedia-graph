@@ -5,13 +5,8 @@ from os import path
 import os
 import json
 
-DUMP_LANG = 'en'
-if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
-DUMP_DATE = '20200901'
-if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
-
-db_client = MongoClient('localhost', 27017)
-db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
+from db import db
+ 
 page_db = db.pages
 graph_db = db.graph
 
@@ -58,5 +53,8 @@ if len(unreachable_ends) > 0: print(len(unreachable_ends), "unreachable ends: ",
 if len(unreachable_starts) > 0: print(len(unreachable_starts), "unreachable ends: ", list(unreachable_starts))
 
 if len(sys.argv) > 2:
-    with open(sys.argv[2], 'w') as f: 
-        json.dump({"nodes": nodes, "edges": edges}, f, indent=2)
+    with open(sys.argv[2], 'w') as f:
+        if len(sys.argv) > 3 and sys.argv[3] == '--compressed':
+            json.dump({"nodes": nodes, "edges": [[e['source'],e['target']] for e in edges]}, f)
+        else:
+            json.dump({"nodes": nodes, "edges": edges}, f, indent=2)

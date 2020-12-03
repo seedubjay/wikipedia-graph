@@ -157,13 +157,7 @@ def parse_data_file(ifile, getID, first_line = 0, verbose=True, timed=False):
 if __name__ == '__main__':
     ifile = 'downloads/enwiki-20200901-pages-articles-multistream2.xml-p30304p88444.bz2'
 
-    DUMP_LANG = 'en'
-    if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
-    DUMP_DATE = '20200901'
-    if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
-
-    db_client = MongoClient('localhost', 27017)
-    db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
+    from db import db
     page_db = db.pages
     file_db = db.uploaded_files
 

@@ -15,14 +15,9 @@ import shutil
 from tqdm import tqdm
 import time
 import resource
-from pymongo import MongoClient
 
 from wikidata_scanner import parse_data_file
-
-DUMP_LANG = 'en'
-if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
-DUMP_DATE = '20200901'
-if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
+from db import db, DUMP_LANG, DUMP_DATE
 
 DOWNLOAD_URL = f"https://dumps.wikimedia.org/{DUMP_LANG}wiki/{DUMP_DATE}/"
 

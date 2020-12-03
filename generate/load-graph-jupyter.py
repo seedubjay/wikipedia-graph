@@ -4,13 +4,11 @@ import os
 import numpy as np
 import csv
 
+from db import DUMP_LANG, DUMP_DATE
+
 sys.path.append('/usr/local/Cellar/graph-tool/2.31_1/lib/python3.8/site-packages/')
 import graph_tool.all as gt
 
-DUMP_LANG = 'en'
-if 'WIKI_LANG' in os.environ: DUMP_LANG = os.environ['WIKI_LANG']
-DUMP_DATE = '20200901'
-if 'WIKI_DATE' in os.environ: DUMP_DATE = os.environ['WIKI_DATE']
 RESULTS_DIR = 'results/'
 
 page_file = RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-pages.csv"
