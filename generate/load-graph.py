@@ -1,3 +1,5 @@
+# takes page database and generates graph database, .gt file for jupyter and neo4j files
+
 from pymongo import MongoClient
 from tqdm import tqdm
 from os import path
@@ -53,7 +55,6 @@ namespace = {
 
 with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-pages.csv", 'w') as f:
     create = csv.writer(f,quoting=csv.QUOTE_NONNUMERIC, escapechar='\\')
-    # create.writerow(['page_id:ID','title','url',':LABEL'])
     for i in tqdm(page_db.find(),total=page_db.estimated_document_count()):
         if 'links' in i:
             if i['namespace'] in namespace:
@@ -80,6 +81,7 @@ with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links-neo4j.csv", 'w') as 
             fneo4j.write(':START_ID,:END_ID,:TYPE')
             if update_mongodb: graph_db.drop()
             for i in tqdm(page_db.find({'links':{'$exists':1}}),total=page_db.estimated_document_count()-len(redirects)):
+                if i['namespace'] not in namespace: continue
                 n = {'_id': i['_id'], 'links' : [], 'namespace': i['namespace']}
                 for l in i['links']:
                     if l in redirects: l = redirects[l]
