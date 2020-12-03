@@ -39,11 +39,11 @@ function path(source, target) {
     return null;
 }
 
-app.get("/wikipedia-route/hello", (req,res) => {
+app.get("/pages", (req,res) => {
     res.json(app.locals.pages);
 })
 
-app.get("/wikipedia-route/:source/:target", (req, res) => {
+app.get("/path/:source/:target", (req, res) => {
     let {source, target} = req.params;
     source = parseInt(source);
     target = parseInt(target)
