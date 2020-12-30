@@ -6,4 +6,4 @@ temp/*
 test.py
 __pycache__/*
 .ipynb_checkpoints/*
-query-service/node_modules/*
+*/node_modules/*

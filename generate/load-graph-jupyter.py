@@ -6,7 +6,7 @@ import csv
 
 from db import DUMP_LANG, DUMP_DATE
 
-sys.path.append('/usr/local/Cellar/graph-tool/2.31_1/lib/python3.8/site-packages/')
+sys.path.append('/usr/local/Cellar/graph-tool/2.35/lib/python3.8/site-packages/')
 import graph_tool.all as gt
 
 RESULTS_DIR = 'results/'

@@ -34,7 +34,7 @@ function dfs(node, depth, path, target) {
 function path(source, target) {
     for (let i = 0; i < 20; i++) {
         let p = dfs(source, i, [], target);
-        if (p) return p.map(i => app.locals.labels.get(i));
+        if (p) return p;//.map(i => app.locals.labels.get(i));
     }
     return null;
 }
