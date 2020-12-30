@@ -67,7 +67,7 @@ for i in tqdm(redirects):
 
 batch = []
 
-update_mongodb = True
+update_mongodb = False
 
 with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links-neo4j.csv", 'w') as fneo4j:
     with open(RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-links-adjlist.csv", 'w') as fadj:
