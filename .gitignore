@@ -4,7 +4,7 @@ downloads/*
 results/*
 temp/*
 test.py
-__pycache__/*
-*/__pycache__/*
+__pycache__
+*/__pycache__
 .ipynb_checkpoints/*
 */node_modules/*

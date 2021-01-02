@@ -4,7 +4,7 @@ from tqdm import tqdm
 from db import DUMP_LANG, DUMP_DATE
 RESULTS_DIR = 'results'
 
-N = 10
+N = 20
 
 with open(f"{RESULTS_DIR}/{DUMP_LANG}wiki-{DUMP_DATE}-links-adjlist.csv") as f:
     

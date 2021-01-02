@@ -17,7 +17,7 @@ graph_file = RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-graph.gt"
 
 graph = gt.Graph(directed=True)
 with open(edge_file) as f:
-    graph.vp.id = graph.add_edge_list((tuple(map(int,l.split(' '))) for l in tqdm(f)), hashed=True).copy(value_type='int')
+    graph.vp.id = graph.add_edge_list((tuple(map(int,l.split(' '))) for l in tqdm(f))).copy(value_type='int')
 
 id_index_map = np.zeros((np.max(graph.vp.id.a)+1,), 'int')
 id_index_map[graph.vp.id.a] = graph.get_vertices()

@@ -27,7 +27,7 @@ template_links_with_args = {
 }
 
 template_links = {}
-with open('resources/country-codes.pkl', 'rb') as f:
+with open('tools/country-codes.pkl', 'rb') as f:
     d = pickle.load(f)
     for i in d:
         template_links[i] = [d[i]]

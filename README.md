@@ -7,6 +7,3 @@
 
 ## Tips
 - use `?action=raw` to see wikitext of a page
-
-## query service
-deploy using `git subtree push --prefix query-service heroku master`

@@ -18,6 +18,7 @@ import resource
 
 from wikidata_scanner import parse_data_file
 from db import db, DUMP_LANG, DUMP_DATE
+from pymongo import MongoClient
 
 DOWNLOAD_URL = f"https://dumps.wikimedia.org/{DUMP_LANG}wiki/{DUMP_DATE}/"
 
@@ -94,8 +95,6 @@ if __name__ == '__main__':
             ids = pickle.load(f)
 
     else:
-        db_client = MongoClient('localhost', 27017)
-        db = db_client[f"wikipedia-{DUMP_LANG}wiki-{DUMP_DATE}"]
         page_db = db.pages
         print('load index from mongodb')
         for i in tqdm(page_db.find({},{'title':1}), total=page_db.estimated_document_count()):
