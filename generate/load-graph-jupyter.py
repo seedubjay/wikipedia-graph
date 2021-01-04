@@ -17,7 +17,10 @@ graph_file = RESULTS_DIR + f"{DUMP_LANG}wiki-{DUMP_DATE}-graph.gt"
 
 graph = gt.Graph(directed=True)
 with open(edge_file) as f:
-    graph.vp.id = graph.add_edge_list((tuple(map(int,l.split(' '))) for l in tqdm(f))).copy(value_type='int')
+    elist = []
+    for l in tqdm(f):
+        elist.append(tuple(map(int,l.split(' '))))
+    graph.vp.id = graph.add_edge_list(elist, hashed=True, hash_type='int')
 
 id_index_map = np.zeros((np.max(graph.vp.id.a)+1,), 'int')
 id_index_map[graph.vp.id.a] = graph.get_vertices()
@@ -25,5 +28,5 @@ graph.vp.title = graph.new_vp('string')
 with open(page_file, newline='') as f:
     for row in tqdm(csv.reader(f)):
         graph.vp.title[id_index_map[int(row[0])]] = row[1]
-        
+       
 graph.save(graph_file)
