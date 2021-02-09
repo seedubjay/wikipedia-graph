@@ -1,7 +1,7 @@
 import sys
 from pymongo import MongoClient
 import pickle
-import tqdm
+from tqdm import tqdm
 
 db_client = MongoClient('localhost', 27017)
 db = db_client["wikipedia"]
